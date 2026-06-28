@@ -12,6 +12,9 @@ import Footer from "./components/home/Footer/Footer";
 import FooterBottom from "./components/home/Footer/FooterBottom";
 import Header from "./components/home/Header/Header";
 import SideBar from "./components/sideBarAdmin/sideBarAdmin";
+import OrderForm from "./pages/Cart/OrderForm";
+import CommandeManagement from "./pages/CommandeManagement/CommandeManagement";
+import AdminDashboard from './pages/admin/AdminDashboard';
 
 import Home from "./pages/Home/Home";
 import Shop from "./pages/Shop/Shop";
@@ -19,8 +22,9 @@ import Contact from "./pages/Contact/Contact";
 import Formation from "./pages/Formation/Formation";
 import FormationDetails from "./pages/FormationDetails/FormationDetails";
 import Cart from "./pages/Cart/Cart";
-import Form from "./pages/Cart/Form";
+
 import ProductDetails from "./pages/ProductDetails/ProductDetails";
+
 
 import ProductManagemnt from "./pages/ProductManagemnt/ProductManagement";
 import ProductDetailsadmin from "./pages/ProductDetailsAdmin/ProductDetailsadmin";
@@ -58,14 +62,17 @@ const router = createBrowserRouter(
         <Route path="formation" element={<Formation />} />
         <Route path="formationdetails" element={<FormationDetails />} />
         <Route path="cart" element={<Cart />} />
-        <Route path="form" element={<Form />} />
+        
+      <Route path="order" element={<OrderForm />} />
         <Route path="product/:nom" element={<ProductDetails />} />
       </Route>
 
       {/* ===== Layout admin ===== */}
-      <Route path="/admin" element={<AdminLayout />}>
-        <Route index element={<ProductManagemnt />} />
+        <Route path="/admin" element={<AdminLayout />}>
+        {/* index means this route matches /admin exactly */}
+        <Route index element={<AdminDashboard />} />
         <Route path="product" element={<ProductManagemnt />} />
+        <Route path="commandes" element={<CommandeManagement />} />
         <Route path="product/:nom" element={<ProductDetailsadmin />} />
         <Route path="client" element={<ClientManagement />} />
       </Route>

@@ -4,7 +4,7 @@ import ProductTable from "../../components/productManagemnt/ProductTable/Product
 const ProductManagemnt = () => {
   return (<>
   <div>
-  <ProductsToolbar/>
+
   <ProductTable/>
   </div>
   </>)

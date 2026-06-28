@@ -6,6 +6,7 @@ import {
   saleImgThree,
 } from "../../../assets/images/index";
 import Image from "../../designLayouts/Image";
+import img4 from "../../../assets/images/img4.png"; // 👈 Ajoutez cette ligne
 
 const Sale = () => {
    return (
@@ -14,39 +15,37 @@ const Sale = () => {
       
       {/* Contenu principal de la page d'accueil */}
       <div className="max-w-container mx-auto px-4 py-16">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-green-800 mb-4">Qui sommes-nous ?</h2>
-          <div className="w-20 h-1 bg-green-600 mx-auto"></div>
-        </div>
+  <div className="text-center mb-12">
+    <h2 className="text-3xl font-bold text-green-800 mb-4">Qui sommes-nous ?</h2>
+    <div className="w-20 h-1 bg-green-600 mx-auto"></div>
+  </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          <div>
-            <p className="text-lg text-gray-700 leading-relaxed mb-6">
-              <span className="font-bold text-green-700">Green Tower Farm</span> est une start-up spécialisée en agriculture hors-sol qui vise à améliorer les rendements de l'agriculture durable en zones urbaines et rurales.
-            </p>
-            <p className="text-lg text-gray-700 leading-relaxed mb-6">
-              Initiatrice d'innovations sociales, Green Tower Farm fabrique, installe et assure la maintenance de <span className="font-semibold">systèmes hydroponiques clé en main</span> qui permettent de cultiver des produits alimentaires sans pesticide.
-            </p>
-            <p className="text-lg text-gray-700 leading-relaxed">
-              Soucieuse de l'environnement, Green Tower Farm renforce les compétences des acteurs locaux grâce à un <span className="font-semibold">panel de formations adaptées à l'agriculture moderne</span>.
-            </p>
-          </div>
+  <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+    {/* Texte */}
+    <div>
+      <p className="text-lg text-gray-700 leading-relaxed mb-6">
+        <span className="font-bold text-green-700">Green Tower Farm</span> est une start-up spécialisée en agriculture hors-sol qui vise à améliorer les rendements de l'agriculture durable en zones urbaines et rurales.
+      </p>
+      <p className="text-lg text-gray-700 leading-relaxed mb-6">
+        Initiatrice d'innovations sociales, Green Tower Farm fabrique, installe et assure la maintenance de <span className="font-semibold">systèmes hydroponiques clé en main</span> qui permettent de cultiver des produits alimentaires sans pesticide.
+      </p>
+      <p className="text-lg text-gray-700 leading-relaxed">
+        Soucieuse de l'environnement, Green Tower Farm renforce les compétences des acteurs locaux grâce à un <span className="font-semibold">panel de formations adaptées à l'agriculture moderne</span>.
+      </p>
+    </div>
 
-          <div className="order-first lg:order-last">
-            <div className="bg-green-50 p-8 rounded-xl shadow-lg">
-              <div className="aspect-video bg-gradient-to-br from-green-100 to-emerald-100 rounded-lg flex items-center justify-center mb-6">
-                <span className="text-5xl text-green-600">🌱</span>
-              </div>
-              <h3 className="text-xl font-bold text-green-800 mb-2 text-center">
-                Agriculture Intelligente
-              </h3>
-              <p className="text-gray-600 text-center">
-                Des solutions innovantes pour cultiver partout, toute l'année.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+    {/* Image */}
+    <div className="order-first lg:order-last flex justify-center">
+  <div className="bg-green-50 p-4 rounded-xl shadow-lg max-w-xl w-full">
+    <img
+      src={img4}
+      alt="Green Tower Farm - Agriculture innovante"
+      className="w-full h-auto rounded-lg object-cover"
+    />
+  </div>
+</div>
+  </div>
+</div>
 
       {/* Section Valeurs / Points forts */}
       <div className="bg-gray-50 py-16">

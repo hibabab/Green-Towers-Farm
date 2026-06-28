@@ -31,8 +31,32 @@ export class OrdersService {
   ) {}
 
 async create(createOrderDto: CreateOrderDto): Promise<Order> {
-  const client = await this.clientsService.create(createOrderDto.client);
+  // APRÈS
+let client = await this.clientRepository.findOne({
+  where: { email: createOrderDto.client.email },
+  relations: ['adresses'],
+});
 
+if (!client) {
+  client = await this.clientsService.create(createOrderDto.client);
+} else {
+  // Ajouter la nouvelle adresse au client existant si elle n'existe pas déjà
+  if (createOrderDto.client.adresses?.length) {
+    const nouvelleAdresse = createOrderDto.client.adresses[0];
+    const dejaExiste = client.adresses?.some(
+      (a) =>
+        a.gouvernorat === nouvelleAdresse.gouvernorat &&
+        a.ville === nouvelleAdresse.ville &&
+        a.codePostal === nouvelleAdresse.codePostal &&
+        a.rue === nouvelleAdresse.rue
+    );
+    if (!dejaExiste) {
+      client = await this.clientsService.update(client.id, {
+        adresses: [...(client.adresses || []), nouvelleAdresse],
+      });
+    }
+  }
+}
   // 1. Sauvegarder la commande d'abord pour avoir son ID
   const order = this.orderRepository.create({
     client,

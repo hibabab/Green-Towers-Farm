@@ -1,176 +1,317 @@
-
-import React, { useState, useEffect } from 'react';
-import ProductForm from '../ProductForm/ProductForm';
-import DeleteModal from '../Delete/delete';
-import { getAllProduits, deleteProduit } from '../../../services/produitService';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import ProductForm from '../ProductForm/ProductForm';
+import DeleteModal from '../Delete/DeleteModal';
+import { getAllProduits, deleteProduit } from '../../../services/produitService';
 
-const BASE_URL = 'http://localhost:3000'; // ✅ adapte selon ton backend
+const BASE_URL = 'http://localhost:3000';
+
+const CATEGORIES = ['Tous', 'Systèmes', 'Solutions', 'Accessoires'];
+
+const BADGE_COLORS = {
+  'Systèmes':    'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+  'Solutions':   'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+  'Accessoires': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300',
+};
+/* ────────────────────────────────── */
 
 const ProductTable = () => {
-  const [showPopup, setShowPopup] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [produits, setProduits] = useState([]);
-  const [produitToEdit, setProduitToEdit] = useState(null);
-  const [produitToDeleteId, setProduitToDeleteId] = useState(null);
+  const [produits, setProduits]             = useState([]);
+  const [loading, setLoading]               = useState(true);
 
-  useEffect(() => {
-    getAllProduits().then(data => {
-      // Filtrer les produits où isDeleted === false
-      const activeProduits = data.filter(produit => produit.isDeleted === false);
-      setProduits(activeProduits);
-    });
+  /* recherche & filtres */
+  const [search, setSearch]                 = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('Tous');
+  const [stockFilter, setStockFilter]       = useState('tous'); // tous | dispo | rupture
+
+  /* modals */
+  const [showForm, setShowForm]             = useState(false);
+  const [produitToEdit, setProduitToEdit]   = useState(null);
+  const [showDelete, setShowDelete]         = useState(false);
+  const [produitToDelete, setProduitToDelete] = useState(null);
+
+  /* ── fetch ── */
+  const fetchProduits = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await getAllProduits();
+      setProduits(data.filter((p) => !p.isDeleted));
+    } catch (err) {
+      console.error('Erreur chargement produits', err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
+  useEffect(() => { fetchProduits(); }, [fetchProduits]);
+
+  /* ── filtrage ── */
+  const filtered = produits.filter((p) => {
+    const matchSearch =
+      p.nom?.toLowerCase().includes(search.toLowerCase()) ||
+      p.categorie?.toLowerCase().includes(search.toLowerCase());
+    const matchCat = categoryFilter === 'Tous' || p.categorie === categoryFilter;
+    const matchStock =
+      stockFilter === 'tous' ||
+      (stockFilter === 'dispo' && p.stock > 0) ||
+      (stockFilter === 'rupture' && p.stock === 0);
+    return matchSearch && matchCat && matchStock;
+  });
+
+  /* ── delete ── */
   const handleDelete = async () => {
-    await deleteProduit(produitToDeleteId);
-    // Mettre à jour la liste en filtrant le produit supprimé
-    setProduits(produits.filter(p => p.id !== produitToDeleteId));
-    setShowDeleteModal(false);
+    if (!produitToDelete) return;
+    await deleteProduit(produitToDelete.id);
+    setProduits((prev) => prev.filter((p) => p.id !== produitToDelete.id));
+    setShowDelete(false);
+    setProduitToDelete(null);
   };
 
+  /* ── open edit ── */
+  const openEdit = (produit) => {
+    setProduitToEdit(produit);
+    setShowForm(true);
+  };
+
+  /* ── open add ── */
+  const openAdd = () => {
+    setProduitToEdit(null);
+    setShowForm(true);
+  };
+
+  /* ── helpers ── */
+  const imageUrl = (path) =>
+    path ? `${BASE_URL}/${path.replace(/\\/g, '/')}` : null;
+
+  /* ─────────────────────────────── */
   return (
-    <div className="overflow-x-auto">
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
 
+      {/* Modals */}
       <ProductForm
-        isOpen={showPopup}
-        onClose={() => setShowPopup(false)}
-        title="Modifier produit"
+        isOpen={showForm}
+        onClose={() => setShowForm(false)}
         produitToEdit={produitToEdit}
+        onSuccess={fetchProduits}
       />
-
       <DeleteModal
-        isOpen={showDeleteModal}
-        onClose={() => setShowDeleteModal(false)}
+        isOpen={showDelete}
+        onClose={() => setShowDelete(false)}
         onConfirm={handleDelete}
+        productName={produitToDelete?.nom}
       />
 
-      <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-        <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-          <tr>
-            <th className="p-4">ID</th>
-            <th className="p-4">IMAGE</th>
-            <th className="p-4">NOM</th>
-            <th className="p-4">PRIX</th>
-            <th className="p-4">CATÉGORIE</th>
-            <th className="p-4">STOCK</th>
-            <th className="p-4">VENDUS</th>
-            <th className="p-4">STATUT</th> {/* Nouvelle colonne */}
-            <th className="p-4">ACTIONS</th>
-          </tr>
-        </thead>
-        <tbody>
-          {produits.map(produit => (
-            <tr key={produit.id} className="border-b dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">
+      {/* ── Toolbar ── */}
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
 
-              {/* IMAGE */}
-              <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
-                {produit.id || '—'}
-              </td>
-              <td className="px-4 py-3">
-                {produit.imageUrl ? (
-                  <img
-                    src={`${BASE_URL}/${produit.imageUrl.replace(/\\/g, '/')}`}
-                    alt={produit.nom}
-                    className="w-10 h-10 object-cover rounded-lg border border-gray-200"
-                  />
-                ) : (
-                  <div className="w-10 h-10 rounded-lg bg-gray-200 flex items-center justify-center text-gray-400">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                )}
-              </td>
+        {/* Recherche */}
+        <div className="relative w-full sm:w-72">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35M17 11A6 6 0 105 11a6 6 0 0012 0z" />
+          </svg>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Rechercher par nom ou catégorie..."
+            className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg bg-gray-50 text-gray-900 focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+          />
+        </div>
 
-              {/* NOM */}
-              <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
-                {produit.nom || '—'}
-              </td>
+        <div className="flex flex-wrap gap-2 items-center">
+          {/* Filtre catégorie */}
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="text-sm border border-gray-300 rounded-lg px-3 py-2 bg-gray-50 text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+          >
+            {CATEGORIES.map((c) => (
+              <option key={c} value={c}>{c === 'Tous' ? 'Toutes catégories' : c}</option>
+            ))}
+          </select>
 
-              {/* PRIX */}
-              <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
-                {produit.prix ? `${produit.prix} DT` : '—'}
-              </td>
+          {/* Filtre stock */}
+         
 
-              {/* CATÉGORIE */}
-              <td className="px-4 py-3">
-                <span className="bg-green-100 text-green-800 text-xs font-medium px-2 py-0.5 rounded dark:bg-green-900 dark:text-green-300">
-                  {produit.categorie || '—'}
-                </span>
-              </td>
+          {/* Bouton ajouter */}
+          <button
+            onClick={openAdd}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+            </svg>
+            Ajouter
+          </button>
+        </div>
+      </div>
 
-              {/* STOCK */}
-              <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
-                {produit.stock ?? '—'}
-              </td>
+      {/* ── Compteur résultats ── */}
+      <div className="px-4 py-2 text-xs text-gray-500 dark:text-gray-400 border-b dark:border-gray-700">
+        {filtered.length} produit{filtered.length !== 1 ? 's' : ''} trouvé{filtered.length !== 1 ? 's' : ''}
+        {search && <span> pour « <strong>{search}</strong> »</span>}
+      </div>
 
-              {/* VENDUS */}
-              <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
-                {produit.vendus ?? 0}
-              </td>
+      {/* ── Table ── */}
+      <div className="overflow-x-auto">
+        {loading ? (
+          <div className="flex justify-center items-center py-20 text-gray-400">
+            <svg className="w-6 h-6 animate-spin mr-2" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+            </svg>
+            Chargement...
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+            <svg className="w-12 h-12 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+            </svg>
+            <p className="text-sm font-medium text-gray-500">Aucun produit trouvé</p>
+            <p className="text-xs text-gray-400 mt-1">Essayez de modifier vos filtres ou ajoutez un produit</p>
+          </div>
+        ) : (
+          <table className="w-full text-sm text-left">
+            <thead className="text-xs text-gray-500 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 border-b dark:border-gray-600">
+              <tr>
+                <th className="px-4 py-3">Image</th>
+                <th className="px-4 py-3">Nom</th>
+                <th className="px-4 py-3">Catégorie</th>
+                <th className="px-4 py-3">Prix</th>
+                <th className="px-4 py-3">Stock</th>
+                <th className="px-4 py-3">Vendus</th>
+                <th className="px-4 py-3">Statut</th>
+                <th className="px-4 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+              {filtered.map((produit) => {
+                const img = imageUrl(produit.imageUrl);
+                const enRupture = produit.stock === 0;
 
-              {/* STATUT - Badge NEW */}
-              <td className="px-4 py-3">
-                {produit.isNew === true && (
-                  <span className="bg-yellow-100 text-yellow-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-yellow-900 dark:text-yellow-300">
-                     NEW
-                  </span>
-                )}
-              </td>
-
-              {/* ACTIONS */}
-              <td className="px-5 py-3">
-                <div className="flex items-center space-x-2">
-
-                  {/* Details */}
-                  <Link
-                    to={`/admin/product/${produit.nom}`}
-                    state={{ item: produit }}
-                    className="flex items-center text-xs font-medium text-blue-600 hover:underline dark:text-blue-400"
+                return (
+                  <tr
+                    key={produit.id}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                   >
-                    Détails
-                  </Link>
+                    {/* Image */}
+                    <td className="px-4 py-3">
+                      {img ? (
+                        <img
+                          src={img}
+                          alt={produit.nom}
+                          className="w-10 h-10 rounded-lg object-cover border border-gray-200 dark:border-gray-600"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-300">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                      )}
+                    </td>
 
-                  {/* Edit */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setProduitToEdit(produit);
-                      setShowPopup(true);
-                    }}
-                    className="flex items-center text-green-600 text-sm font-medium rounded-lg "
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
-                      <path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" />
-                    </svg>
-                    Edit
-                  </button>
+                    {/* Nom */}
+                    <td className="px-4 py-3 font-medium text-gray-900 dark:text-white max-w-[180px] truncate">
+                      {produit.nom || '—'}
+                    </td>
 
-                  {/* Delete */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setProduitToDeleteId(produit.id);
-                      setShowDeleteModal(true);
-                    }}
-                    className="flex items-center text-red-700 "
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                    </svg>
-                    Delete
-                  </button>
+                    {/* Catégorie */}
+                    <td className="px-4 py-3">
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${BADGE_COLORS[produit.categorie] || BADGE_COLORS.AUTRE}`}>
+                        {produit.categorie || '—'}
+                      </span>
+                    </td>
 
-                </div>
-              </td>
+                    {/* Prix */}
+                    <td className="px-4 py-3 font-medium text-gray-900 dark:text-white whitespace-nowrap">
+                      {produit.prix != null ? `${Number(produit.prix).toFixed(2)} DT` : '—'}
+                    </td>
 
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                    {/* Stock */}
+                    <td className="px-4 py-3">
+                      <span className={`font-semibold ${enRupture ? 'text-red-500' : 'text-gray-900 dark:text-white'}`}>
+                        {produit.stock ?? '—'}
+                      </span>
+                    </td>
 
+                    {/* Vendus */}
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-300">
+                      {produit.vendus ?? 0}
+                    </td>
+
+                    {/* Statut */}
+                    <td className="px-4 py-3">
+                      <div className="flex flex-col gap-1">
+                        {enRupture && (
+                          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400 w-fit">
+                            Rupture
+                          </span>
+                        )}
+                        {produit.isNew && (
+                          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300 w-fit">
+                            NEW
+                          </span>
+                        )}
+                        {!enRupture && !produit.isNew && (
+                          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 w-fit">
+                            Disponible
+                          </span>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Actions */}
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-2">
+                        {/* Détails */}
+                        <Link
+                          to={`/admin/product/${produit.nom}`}
+                          state={{ item: produit }}
+                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors dark:text-blue-400 dark:hover:bg-blue-900/20"
+                          title="Voir détails"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                        </Link>
+
+                        {/* Modifier */}
+                        <button
+                          type="button"
+                          onClick={() => openEdit(produit)}
+                          className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors dark:text-green-400 dark:hover:bg-green-900/20"
+                          title="Modifier"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+
+                        {/* Supprimer */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setProduitToDelete(produit);
+                            setShowDelete(true);
+                          }}
+                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors dark:text-red-400 dark:hover:bg-red-900/20"
+                          title="Supprimer"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
     </div>
   );
 };

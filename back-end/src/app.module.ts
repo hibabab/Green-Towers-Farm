@@ -5,9 +5,6 @@ import { ProductModule } from './product/product.module';
 import { OrderModule } from './order/order.module';
 import { ClientModule } from './client/client.module';
 
-
-
-
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -18,17 +15,15 @@ import { ClientModule } from './client/client.module';
         host: config.get<string>('DB_HOST'),
         port: config.get<number>('DB_PORT'),
         username: config.get<string>('DB_USER'),
-        password: String(config.get('DB_PASS')),  
+        password: String(config.get('DB_PASS')),
         database: config.get<string>('DB_NAME'),
         autoLoadEntities: true,
-        
         synchronize: true,
       }),
     }),
-   ProductModule,
-   OrderModule,
-   ClientModule,
+    ProductModule,
+    OrderModule,
+    ClientModule,
   ],
- 
 })
 export class AppModule {}
